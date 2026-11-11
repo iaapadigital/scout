@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+python-dotenv>=1.0
+pydantic>=2.6
+feedparser>=6.0
+trafilatura>=1.8
+# Browser automation engine (pulls playwright/patchright + its own LLM wrappers)
+browser-use>=0.3.2

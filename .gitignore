@@ -1,0 +1,15 @@
+# secrets & local state
+**/.env
+**/midway.db
+outputs/*
+!outputs/.gitkeep
+
+# python
+**/.venv/
+**/__pycache__/
+*.py[cod]
+
+
+# local tooling
+.claude/settings.local.json
+static/*.bak

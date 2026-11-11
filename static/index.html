@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IAAPA News Scraper — Agent Dispatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#041935;         /* header bg + primary ink */
+    --blue:#266092;         /* links, secondary structure */
+    --cyan:#45B4E2;         /* bright accent, highlights, card left-borders */
+    --magenta:#C62D91;      /* status/signature accent, "why it matters" */
+    --orange:#F05123;       /* primary action */
+    --orange-deep:#cf3f14;
+
+    --ink:#041935;
+    --ink-soft:#54657c;
+    --ground:#eef2f7;
+    --card:#ffffff;
+    --border:#dbe3ec;
+    --tint:#f6f9fc;
+    --ok:#1f7a52;
+    --err:#b3261e;
+
+    --radius:12px;
+    --shadow:0 1px 2px rgba(4,25,53,.05), 0 4px 14px rgba(4,25,53,.05);
+    --shadow-hi:0 2px 4px rgba(4,25,53,.07), 0 10px 24px rgba(4,25,53,.10);
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --maxw:1180px;
+    --pad:24px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{transition:none!important;animation:none!important}
+  }
+  body{
+    font-family:'Public Sans',system-ui,-apple-system,sans-serif;
+    background:var(--ground);color:var(--ink);min-height:100vh;
+    font-size:16px;line-height:1.55;overflow-x:hidden;
+  }
+  a{color:var(--blue);text-underline-offset:2px}
+  a:hover{color:var(--navy)}
+  button{font-family:inherit;cursor:pointer}
+  :focus-visible{outline:3px solid var(--cyan);outline-offset:2px;border-radius:4px}
+
+  /* ---------- shared page frame ---------- */
+  .wrap{width:100%;max-width:var(--maxw);margin:0 auto;padding:0 var(--pad)}
+
+  /* ---------- masthead ---------- */
+  header{background:var(--navy);color:#fff;padding:20px 0;border-bottom:4px solid var(--cyan)}
+  .masthead{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:14px;min-width:0}
+  .brand-logo{height:44px;width:auto;max-width:150px;display:block;flex:none;object-fit:contain}
+  .brand-text{min-width:0}
+  h1{
+    font-family:'Archivo',system-ui,sans-serif;font-weight:800;
+    font-size:clamp(1.35rem,2.6vw,1.9rem);letter-spacing:-.015em;line-height:1.1;
+    overflow-wrap:anywhere;
+  }
+  h1 .accent{color:var(--cyan)}
+  .tagline{color:#a9bdd4;font-size:.84rem;line-height:1.4;margin-top:3px}
+  #health{
+    margin-left:auto;font-family:var(--mono);font-size:.72rem;
+    display:flex;gap:8px;flex-wrap:wrap;color:#a9bdd4;
+  }
+  #health span{
+    background:rgba(69,180,226,.10);border:1px solid rgba(69,180,226,.28);
+    border-radius:99px;padding:4px 11px;white-space:nowrap;
+  }
+  #health b{color:#fff;font-weight:600}
+  @media (max-width:700px){ #health{margin-left:0;width:100%} }
+
+  /* ---------- main grid ---------- */
+  main{
+    width:100%;max-width:var(--maxw);margin:0 auto;padding:30px var(--pad) 80px;
+    display:grid;grid-template-columns:380px 1fr;gap:26px;align-items:start;
+  }
+  @media (max-width:960px){ main{grid-template-columns:1fr} }
+  main>section{min-width:0}
+
+  h2{
+    font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:1.05rem;
+    letter-spacing:.02em;margin-bottom:12px;color:var(--navy);
+  }
+  h2 .rule{display:block;width:34px;height:3px;background:var(--cyan);margin-top:7px;border-radius:2px}
+
+  /* ---------- cards ---------- */
+  .panel{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:22px;box-shadow:var(--shadow);overflow:hidden;
+  }
+
+  /* ---------- dispatch form ---------- */
+  label{
+    display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:.07em;color:var(--ink-soft);margin:16px 0 6px;
+  }
+  label:first-of-type{margin-top:0}
+  textarea,input[type=text],select{
+    width:100%;max-width:100%;border:1px solid var(--border);border-radius:8px;
+    padding:10px 11px;font:inherit;font-size:.92rem;background:#fff;color:var(--ink);
+  }
+  textarea:focus,input:focus,select:focus{
+    border-color:var(--cyan);outline:none;box-shadow:0 0 0 3px rgba(69,180,226,.25);
+  }
+  textarea{resize:vertical;min-height:70px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .row>div{flex:1 1 140px;min-width:0}
+  .hint{font-size:.78rem;color:var(--ink-soft);margin-top:5px;overflow-wrap:anywhere}
+  #dispatch-btn{
+    margin-top:20px;width:100%;background:var(--orange);color:#fff;border:none;border-radius:8px;
+    padding:13px 14px;font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:.95rem;
+    letter-spacing:.04em;text-transform:uppercase;transition:background .15s,box-shadow .15s;
+  }
+  #dispatch-btn:hover{background:var(--orange-deep);box-shadow:0 4px 12px rgba(240,81,35,.28)}
+  #dispatch-btn:disabled{background:var(--ink-soft);cursor:wait;box-shadow:none}
+  #form-msg{margin-top:11px;font-size:.85rem;min-height:1.2em;overflow-wrap:anywhere}
+  #form-msg.err{color:var(--err)} #form-msg.ok{color:var(--ok)}
+
+  /* ---------- run history cards ---------- */
+  .stub{
+    position:relative;background:var(--card);border:1px solid var(--border);
+    border-left:4px solid var(--cyan);border-radius:var(--radius);margin-bottom:12px;
+    display:flex;align-items:stretch;overflow:hidden;box-shadow:var(--shadow);
+    transition:transform .12s,box-shadow .12s,border-color .12s;
+  }
+  .stub:hover{transform:translateY(-2px);box-shadow:var(--shadow-hi)}
+  .stub-main{flex:1 1 auto;min-width:0;padding:15px 17px}
+  /* metadata rail — contained inside the card, no vertical overflow */
+  .stub-tear{
+    flex:0 0 92px;min-width:0;border-left:1px solid var(--border);background:var(--tint);
+    display:flex;align-items:center;justify-content:center;padding:12px 8px;text-align:center;
+  }
+  .stub-id{
+    font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;line-height:1.35;
+    color:var(--blue);overflow-wrap:anywhere;
+  }
+  .stub-topics{
+    font-weight:700;font-size:.97rem;line-height:1.35;color:var(--navy);
+    overflow-wrap:anywhere;
+    display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .stub-meta{
+    font-family:var(--mono);font-size:.72rem;color:var(--ink-soft);margin-top:7px;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-wrap:anywhere;
+  }
+  @media (max-width:420px){ .stub-tear{flex:0 0 74px;padding:10px 6px} }
+
+  .badge{
+    display:inline-block;max-width:100%;font-family:'Public Sans',sans-serif;font-size:.68rem;
+    font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 9px;border-radius:99px;
+    white-space:nowrap;
+  }
+  .badge.queued{background:#e7edf5;color:var(--blue)}
+  .badge.running{background:#fbe4f2;color:var(--magenta)}
+  .badge.running::before{content:"● ";animation:blink 1.1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  .badge.done{background:#dcefe6;color:var(--ok)}
+  .badge.failed{background:#f8dedb;color:var(--err)}
+
+  #jobs-empty{
+    color:var(--ink-soft);font-size:.9rem;padding:34px 22px;text-align:center;
+    border:2px dashed var(--border);border-radius:var(--radius);background:rgba(255,255,255,.55);
+  }
+
+  /* ---------- detail drawer ---------- */
+  #detail{display:none;grid-column:1/-1;min-width:0}
+  #detail.open{display:block}
+  .detail-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .detail-head h2{margin:0;min-width:0;overflow-wrap:anywhere}
+  .detail-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .btn-sm{
+    border:1px solid var(--border);background:#fff;border-radius:7px;padding:7px 13px;
+    font-size:.82rem;font-weight:600;color:var(--blue);transition:border-color .12s,color .12s;
+  }
+  .btn-sm:hover{border-color:var(--cyan);color:var(--navy)}
+  #progress{
+    background:var(--navy);color:#c6d6e6;font:.78rem/1.6 var(--mono);border-radius:9px;
+    padding:14px 16px;max-height:200px;overflow:auto;margin-bottom:20px;
+    white-space:pre-wrap;overflow-wrap:anywhere;
+  }
+  .article{
+    border:1px solid var(--border);border-left:3px solid var(--cyan);
+    padding:13px 16px;margin-bottom:12px;background:#fff;border-radius:0 9px 9px 0;
+    overflow:hidden;
+  }
+  .article h3{
+    font-family:'Archivo',system-ui,sans-serif;font-weight:600;font-size:1rem;line-height:1.35;
+    margin-bottom:6px;overflow-wrap:anywhere;
+  }
+  .article h3 a{color:var(--blue);text-decoration:none;overflow-wrap:anywhere}
+  .article h3 a:hover{color:var(--navy);text-decoration:underline}
+  .article p{font-size:.88rem;color:var(--ink-soft);margin-bottom:6px;overflow-wrap:anywhere}
+  .article p:last-child{margin-bottom:0}
+  .article .why{
+    color:var(--ink);font-size:.85rem;background:rgba(198,45,145,.05);
+    border-left:2px solid var(--magenta);border-radius:0 6px 6px 0;padding:7px 11px;
+  }
+  .article .why b{color:var(--magenta);font-weight:700}
+  .topic-h{
+    font-family:'Archivo',system-ui,sans-serif;font-weight:700;font-size:.8rem;
+    text-transform:uppercase;letter-spacing:.09em;color:var(--navy);
+    margin:22px 0 12px;border-bottom:2px solid var(--border);padding-bottom:6px;
+    overflow-wrap:anywhere;
+  }
+  #results>.topic-h:first-child{margin-top:0}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap masthead">
+    <div class="brand">
+      <img class="brand-logo" src="/static/iaapa-logo.png" alt="IAAPA" onerror="this.remove()">
+      <div class="brand-text">
+        <h1>IAAPA <span class="accent">News Scraper</span></h1>
+        <div class="tagline">Dispatch agents. Collect the industry news. Build the digest.</div>
+      </div>
+    </div>
+    <div id="health">loading…</div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>Dispatch a run<span class="rule"></span></h2>
+    <div class="panel">
+      <label for="topics">Topics — one per line, one agent each</label>
+      <textarea id="topics" rows="5" placeholder="new roller coaster announcements&#10;FEC industry acquisitions&#10;theme park attendance trends"></textarea>
+      <div class="hint">Each line becomes its own research agent.</div>
+
+      <label for="context">Extra context for the agents (optional)</label>
+      <textarea id="context" rows="3" placeholder="Prioritize North America, last 30 days. Skip press releases; prefer trade press like IAAPA, Blooloop, Amusement Today."></textarea>
+
+      <div class="row">
+        <div>
+          <label for="engine">Engine</label>
+          <select id="engine">
+            <option value="auto">Auto (recommended)</option>
+            <option value="rss">RSS + trade press (no keys)</option>
+            <option value="firecrawl">Firecrawl (needs key)</option>
+            <option value="browser">Browser agent (needs LLM)</option>
+          </select>
+        </div>
+        <div>
+          <label for="agents">Concurrent agents</label>
+          <input type="text" id="agents" value="3" inputmode="numeric">
+        </div>
+      </div>
+
+      <button id="dispatch-btn">DISPATCH AGENTS</button>
+      <div id="form-msg" role="status"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Run history<span class="rule"></span></h2>
+    <div id="jobs"></div>
+    <div id="jobs-empty">No runs yet. Dispatch your first agents and results will appear here.</div>
+  </section>
+
+  <section id="detail">
+    <div class="panel">
+      <div class="detail-head">
+        <h2 id="detail-title">Run</h2>
+        <span id="detail-badge" class="badge queued">queued</span>
+        <div class="detail-actions">
+          <button class="btn-sm" id="copy-md">Copy digest</button>
+          <a class="btn-sm" id="dl-md" href="#" style="text-decoration:none">Download .md</a>
+          <button class="btn-sm" id="close-detail">Close</button>
+        </div>
+      </div>
+      <div id="progress"></div>
+      <div id="results"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let openJobId = null, pollTimer = null;
+
+async function api(path, opts){ const r = await fetch(path, opts); if(!r.ok){ const e = await r.json().catch(()=>({detail:r.statusText})); throw new Error(e.detail || 'Request failed'); } return r.json(); }
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadHealth(){
+  try{
+    const h = await api('/api/health');
+    $('#health').innerHTML =
+      `<span>LLM <b>${esc(h.llm_model)}</b>${h.llm_configured?' ✓':''}</span>` +
+      `<span>Firecrawl <b>${h.firecrawl_configured?'✓ ready':'not set'}</b></span>` +
+      `<span>RSS <b>✓ always on</b></span>`;
+  }catch(e){ $('#health').textContent = 'API unreachable'; }
+}
+
+async function loadJobs(){
+  const jobs = await api('/api/jobs');
+  $('#jobs-empty').style.display = jobs.length ? 'none' : 'block';
+  $('#jobs').innerHTML = jobs.map(j => `
+    <div class="stub" role="button" tabindex="0" data-id="${j.id}" aria-label="Open run ${j.id}">
+      <div class="stub-main">
+        <div class="stub-topics">${esc(j.topics.join(' · '))}</div>
+        <div class="stub-meta">
+          <span class="badge ${j.status}">${j.status}</span>
+          <span>${new Date(j.created_at*1000).toLocaleString()} · ${j.results} articles · ${esc(j.engine)}</span>
+        </div>
+      </div>
+      <div class="stub-tear"><span class="stub-id">RUN ${j.id.slice(0,6).toUpperCase()}</span></div>
+    </div>`).join('');
+  document.querySelectorAll('.stub').forEach(el => {
+    el.onclick = () => openDetail(el.dataset.id);
+    el.onkeydown = e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openDetail(el.dataset.id); } };
+  });
+}
+
+async function openDetail(id){
+  openJobId = id;
+  $('#detail').classList.add('open');
+  await refreshDetail();
+  $('#detail').scrollIntoView({behavior:'smooth'});
+}
+
+async function refreshDetail(){
+  if(!openJobId) return;
+  const j = await api('/api/jobs/' + openJobId);
+  $('#detail-title').textContent = 'Run ' + j.id.slice(0,6).toUpperCase() + ' — ' + j.topics.join(', ');
+  const b = $('#detail-badge'); b.className = 'badge ' + j.status; b.textContent = j.status;
+  $('#progress').textContent = j.progress.join('\n') || 'Waiting for agents…';
+  $('#dl-md').href = '/api/jobs/' + j.id + '/digest.md';
+  if(j.error) $('#progress').textContent += '\nERROR: ' + j.error;
+
+  const byTopic = {};
+  j.results.forEach(a => (byTopic[a.topic] = byTopic[a.topic] || []).push(a));
+  $('#results').innerHTML = Object.entries(byTopic).map(([t, arts]) =>
+    `<div class="topic-h">${esc(t)}</div>` + arts.map(a => `
+      <div class="article">
+        <h3><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a></h3>
+        <p>${esc(a.summary)}</p>
+        <p class="why"><b>Why it matters:</b> ${esc(a.why_it_matters)} ${a.published_hint?('· '+esc(a.published_hint)):''}</p>
+      </div>`).join('')
+  ).join('') || '<p class="hint">No articles yet.</p>';
+
+  window._digest = j.digest_md || '';
+}
+
+$('#copy-md').onclick = async () => {
+  if(!window._digest){ alert('Digest not ready yet.'); return; }
+  await navigator.clipboard.writeText(window._digest);
+  $('#copy-md').textContent = 'Copied ✓';
+  setTimeout(()=> $('#copy-md').textContent = 'Copy digest', 1600);
+};
+$('#close-detail').onclick = () => { $('#detail').classList.remove('open'); openJobId = null; };
+
+$('#dispatch-btn').onclick = async () => {
+  const topics = $('#topics').value.split('\n').map(t=>t.trim()).filter(Boolean);
+  const msg = $('#form-msg');
+  msg.className=''; msg.textContent='';
+  if(!topics.length){ msg.className='err'; msg.textContent='Add at least one topic.'; return; }
+  const btn = $('#dispatch-btn'); btn.disabled = true; btn.textContent = 'DISPATCHING…';
+  try{
+    const res = await api('/api/jobs', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        topics,
+        context: $('#context').value.trim(),
+        engine: $('#engine').value,
+        num_agents: Math.max(1, parseInt($('#agents').value)||3)
+      })});
+    msg.className='ok'; msg.textContent = 'Agents dispatched — run ' + res.job_id.slice(0,6).toUpperCase();
+    await loadJobs();
+    openDetail(res.job_id);
+  }catch(e){ msg.className='err'; msg.textContent = e.message; }
+  btn.disabled = false; btn.textContent = 'DISPATCH AGENTS';
+};
+
+function poll(){ loadJobs(); refreshDetail(); }
+loadHealth(); loadJobs();
+pollTimer = setInterval(poll, 2500);
+</script>
+</body>
+</html>

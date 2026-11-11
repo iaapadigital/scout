@@ -1,0 +1,21 @@
+# Run Midway Scout as a service so it survives reboots.
+#   sudo cp midway-scout.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now midway-scout
+# Paths assume the install at /opt/midway-scout owned by user "ubuntu" — adjust if different.
+[Unit]
+Description=Midway Scout agent dispatch server
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/midway-scout
+ExecStart=/opt/midway-scout/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+EnvironmentFile=/opt/midway-scout/.env
+# systemd's PATH won't include ~/.local/bin, so if you use LLM_PROVIDER=claude-code,
+# also set CLAUDE_CODE_BIN=/home/ubuntu/.local/bin/claude in .env
+Environment=CLAUDE_CODE_BIN=/home/ubuntu/.local/bin/claude
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
